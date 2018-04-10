@@ -1,0 +1,76 @@
+#######################################
+#Syntax Coloring Map For SHT1xController
+#######################################
+
+#######################################
+#Datatypes (KEYWORD1)
+#######################################
+
+SHT1xController	KEYWORD1
+
+SHT_RETURN_TYPE	KEYWORD1
+SHT_COMMAND_TYPE	KEYWORD1
+SHT_REGISTER_FLAGS	KEYWORD1
+
+#######################################
+#	Methods	and	Functions	(KEYWORD2)
+#######################################
+
+readTemperatureC	KEYWORD2
+readTemperatureF	KEYWORD2
+readHumidity	KEYWORD2
+readDewpoint	KEYWORD2
+reset	KEYWORD2
+getLastError	KEYWORD2
+timeUntilUnblock	KEYWORD2
+
+updateStatusRegister	KEYWORD2
+writeStatusRegister	KEYWORD2
+
+sendCommand	KEYWORD2
+shiftOut	KEYWORD2
+shiftIn	KEYWORD2
+resetConnection	KEYWORD2
+
+calcCRC	KEYWORD2
+reverseOrder	KEYWORD2
+
+#######################################
+#	Instances	(KEYWORD2)
+#######################################
+
+_dataPin	KEYWORD2
+_clockPin	KEYWORD2
+_lastError	KEYWORD2
+_timeStamp	KEYWORD2
+_lastCmd	KEYWORD2
+_statusRegister	KEYWORD2
+
+#######################################
+# Constants (LITERAL1)
+
+RETURN_SUCCESS	LITERAL1
+ERROR_NO_ACK	LITERAL1
+ERROR_CRC_MISMATCH	LITERAL1
+ERROR_TIMEOUT	LITERAL1
+ERROR_OVERLOAD	LITERAL1
+
+READ_TEMPERATURE	LITERAL1
+READ_HUMIDITY	LITERAL1
+READ_STATUS_REGISTER	LITERAL1
+WRITE_STATUS_REGISTER	LITERAL1
+SOFT_RESET	LITERAL1
+
+END_OF_BATTERY	LITERAL1
+HEATER	LITERAL1
+OTP_RELOAD	LITERAL1
+RESOLUTION	LITERAL1
+
+SHT1X_BITWISE_CRC	LITERAL1
+SHT1X_NO_SAFEGUARD	LITERAL1
+SHT1X_SIMPLE	LITERAL1
+SHT1X_NO_CRC_CHECK	LITERAL1
+SHT1X_NO_PULLUP	LITERAL1
+SHT1X_NO_DELAY_PULSE	LITERAL1
+#######################################
+
