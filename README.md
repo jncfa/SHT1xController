@@ -27,7 +27,7 @@ Documentation
 --------------
 
 * **[Installing an Arduino Library Guide](https://www.arduino.cc/en/Guide/Libraries#toc2)** - Basic information on how to install an Arduino library.
-* **[Code Repository](https://github.com/jnfaria/SHT1xController)** - Main repository 
+* **[Code Repository](https://github.com/jncfa/SHT1xController)** - Main repository 
 
 License Information
 -------------------
