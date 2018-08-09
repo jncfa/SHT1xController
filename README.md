@@ -8,9 +8,9 @@ This library is an expansion of the SHT1x controller provided by [Sparkfun](http
 the status register of the sensor, you now have to ability select measurement resolution (supporting 8/12/14 bits data measurements) for increased precision or speed, and even use the sensor's internal heater in the measurements.
 It also contains an optional CRC-8 checksum calculation to verify data integrity (It's active by default, read below to find out how to disable this feature). 
 
-Using preprocessor directives, you can enable/disable some non-essencial procedures to achieve better performance (extra space / faster processing):
-- *SHT1X_BITWISE_CRC* : Changes CRC-8 checksum calculation from a bytewise process (using a lookup table) to a bitwise (slower but frees up some space);
-- *SHT1X_NO_SAFEGUARD* : Disables SHT1X overheat safeguard procedures (reduces some space, but may harm sensor in long-term usage);
+Using preprocessor directives, you can enable/disable some procedures available in the class:
+- *SHT1X_BITWISE_CRC* : Changes CRC-8 checksum calculation from a bytewise (using a lookup table) to a bitwise process;
+- *SHT1X_NO_SAFEGUARD* : Disables SHT1x overheat safeguard procedures (may harm sensor in **long-term usage**);
 - *SHT1X_SIMPLE* : Removes all non-essencial procedures (this enables all directives below and disables all status registry methods);
 	- *SHT1X_NO_CRC_CHECK* : Disables the CRC-8 checksum calculation within the data measurements;
 	- *SHT1X_NO_PULLUP* : Makes the data line value unknown (depends on the last bit emitted), but you gain extra memory space;
