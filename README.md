@@ -5,7 +5,7 @@ This is a Arduino Library for the SHT1x series (SHT10, SHT11, SHT15) temperature
 It allows temperature measurements both in Celsius and Fahrenheit degrees, as well as humidity (in percentage).
 
 This library is an expansion of the SHT1x controller provided by [Sparkfun](https://github.com/sparkfun/SHT15_Breakout). By taping into
-the status register of the sensor, you now have to ability select measurement resolution (supporting 8/12/14 bits data measurements) for increased precision or speed, and even use the sensor's internal heater in the measurements.
+the status register of the sensor, you now have the ability to switch measurement resolution (supporting 8/12/14 bits data measurements) for increased precision or speed, and even use the sensor's internal heater in the measurements.
 It also contains an optional CRC-8 checksum calculation to verify data integrity (It's active by default, read below to find out how to disable this feature). 
 
 Using preprocessor directives, you can enable/disable some procedures available in the class:
