@@ -13,19 +13,16 @@
 
 #include "SHT1x_CTR.h"
 
-#ifdef SHT1X_NO_DELAY_PULSE
-	#define digitalWriteS(arg1, arg2) digitalWrite(arg1, arg2); delayMicroseconds(1)
-	#define digitalWriteL(arg1, arg2) digitalWrite(arg1, arg2); delayMicroseconds(3)
-#else
-	#define digitalWriteS(arg1, arg2) digitalWrite(arg1, arg2)
-	#define digitalWriteL(arg1, arg2) digitalWrite(arg1, arg2)
-#endif
+#define digitalWriteS(arg1, arg2) digitalWrite(arg1, arg2); delayMicroseconds(1)
+#define digitalWriteL(arg1, arg2) digitalWrite(arg1, arg2); delayMicroseconds(3)
 
+#define TIMESPAN(cmd) (cmd == READ_TEMPERATURE ? (statusRegister & RESOLUTION ? 80 : 320 ) : (cmd == READ_HUMIDITY & !(statusRegister & RESOLUTION) ? 80 : 20))
 
-#define TIMESPAN(cmd) (cmd == READ_TEMPERATURE ? (_statusRegister & RESOLUTION ? 80 : 320 ) : (cmd == READ_HUMIDITY & !(_statusRegister & RESOLUTION) ? 80 : 20))
-
-SHT1xController::SHT1xController(unsigned char dataPin, unsigned char clockPin) : _dataPin(dataPin), 	_clockPin(clockPin)  {
-	pinMode(_clockPin, OUTPUT); //sets up the clock line
+SHT1xController::SHT1xController(unsigned char dataPin, unsigned char clockPin) {
+	this->dataPin = dataPin;
+	this->clockPin = clockPin;
+	
+	pinMode(clockPin, OUTPUT); //sets up the clock line
 
 	#ifndef SHT1X_SIMPLE 
 		readStatusRegister(); //updates register for the first time
@@ -39,26 +36,22 @@ float SHT1xController::readTemperatureC() {
 	const float d1 = -40.1;			// for 12/14 Bit (in Cº) @ 5V
 	const float d2 = 0.01;			// for 14 Bit (in Cº) @ 5V
 
-#ifndef SHT1X_SIMPLE
-	const float d2h = 0.04;			// for 12 Bit (in Cº) @ 5V
-#endif
+	lastError = sendCommand(READ_TEMPERATURE);
 
-	_lastError = sendCommand(READ_TEMPERATURE);
-
-	if (_lastError != RETURN_SUCCESS)
+	if (lastError != RETURN_SUCCESS)
 		return NAN; //error
 
-	pinMode(_dataPin, INPUT);
+	pinMode(dataPin, INPUT);
 
 	short timeout = TIMESPAN(READ_TEMPERATURE);
 
 	for (short i = 0; i < timeout/5; i++) {
 		delay(5);
-		if (digitalRead(_dataPin) == LOW) {
+		if (digitalRead(dataPin) == LOW) {
 			break;
 		}
 		else if (i == timeout)
-			_lastError = ERROR_TIMEOUT;
+			lastError = ERROR_TIMEOUT;
 			return NAN; //error
 	}
 
@@ -69,61 +62,49 @@ float SHT1xController::readTemperatureC() {
 	val |= shiftIn(true);
 
 	unsigned char checksum = shiftIn(false); //sends the sensor into idle mode and retrieves checksum
-	unsigned char crc = calcCRC(READ_TEMPERATURE, reverseOrder(_statusRegister & 0xF));
+	unsigned char crc = calcCRC(READ_TEMPERATURE, reverseOrder(statusRegister & 0xF));
 	crc = calcCRC((val >> 8 & 0xF), crc);
 	crc = calcCRC((val & 0xF), crc);
 
 	if (crc != reverseOrder(checksum)) {
-		_lastError = ERROR_CRC_MISMATCH; //error
+		lastError = ERROR_CRC_MISMATCH; //error
 		return NAN;
 	}
 #else
 	val |= shiftIn(false); //sends the sensor into idle mode
 #endif
-
-
-#ifndef SHT1X_SIMPLE
-	if (_statusRegister & RESOLUTION) { //12bit measure
+	
+	if (statusRegister & RESOLUTION) { //12bit measure
 		return (val * d2h) + d1;
 	}
 	else { //14bit
 		return (val * d2) + d1;
 	}
-#else //14bit
-	return (val * d2) + d1;
-#endif
-
 }
 
 float SHT1xController::readTemperatureF() {
 	short val;						// Raw temperature value returned from sensor
-
-
-
 	// Conversion coefficients from SHT15 datasheet
 	const float d1 = -40.2;			// for 12/14 Bit (in Fº) @ 5V
 	const float d2 = 0.018;			// for 14 Bit (in Fº) @ 5V
-
-#ifndef SHT1X_SIMPLE
 	const float d2h = 0.072;		// for 12 Bit (in Fº) @ 5V
-#endif
 
-	_lastError = sendCommand(READ_TEMPERATURE);
+	lastError = sendCommand(READ_TEMPERATURE);
 
-	if (_lastError != RETURN_SUCCESS)
+	if (lastError != RETURN_SUCCESS)
 		return NAN; //error
 
-	pinMode(_dataPin, INPUT);
+	pinMode(dataPin, INPUT);
 
 	short timeout = TIMESPAN(READ_TEMPERATURE);
 
 	for (short i = 0; i < timeout/5; i++) {
 		delay(5);
-		if (digitalRead(_dataPin) == LOW) {
+		if (digitalRead(dataPin) == LOW) {
 			break;
 		}
 		else if (i == timeout)
-			_lastError = ERROR_TIMEOUT;
+			lastError = ERROR_TIMEOUT;
 			return NAN; //error
 	}
 
@@ -134,28 +115,23 @@ float SHT1xController::readTemperatureF() {
 	val |= shiftIn(true);
 
 	unsigned char checksum = shiftIn(false); //sends the sensor into idle mode and retrieves checksum
-	unsigned char crc = calcCRC(READ_TEMPERATURE, reverseOrder(_statusRegister & 0xF));
+	unsigned char crc = calcCRC(READ_TEMPERATURE, reverseOrder(statusRegister & 0xF));
 	crc = calcCRC((val >> 8 & 0xF), crc);
 	crc = calcCRC((val & 0xF), crc);
 
 	if (crc != reverseOrder(checksum)) {
-		_lastError = ERROR_CRC_MISMATCH; //error
+		lastError = ERROR_CRC_MISMATCH; //error
 		return NAN;
 	}
 #else
 	val |= shiftIn(false); //sends the sensor into idle mode
 #endif
-
-#ifndef SHT1X_SIMPLE
-	if (_statusRegister & RESOLUTION) { //12bit measure
+	if (statusRegister & RESOLUTION) { //12bit measure
 		return (val * d2h) + d1;
 	}
 	else { //14bit
 		return (val * d2) + d1;
 	}
-#else
-	return (val * d2) + d1;
-#endif
 }
 
 float SHT1xController::readHumidity() {
@@ -167,33 +143,31 @@ float SHT1xController::readHumidity() {
 	const float C3 = -2.8000E-6;	// for 12 Bit
 	const float T1 = 0.01;			// for 8/12 Bit
 	const float T2 = 0.00008;		// for 12 Bit 
-
-#ifndef SHT1X_SIMPLE
+	
 	const float C2h = 0.6480;		// for 8 Bit
 	const float C3h = -7.2000E-4;	// for 8 Bit
 	const float T2h = 0.00128;		// for 8 Bit
-#endif
 
 
 
 	// Start transmission and send READ_HUMIDITY unsigned char
 
-	_lastError = sendCommand(READ_HUMIDITY);
+	lastError = sendCommand(READ_HUMIDITY);
 
-	if (_lastError != RETURN_SUCCESS) 
+	if (lastError != RETURN_SUCCESS) 
 		return NAN; //error
 
-	pinMode(_dataPin, INPUT);
+	pinMode(dataPin, INPUT);
 
 	short timeout = TIMESPAN(READ_HUMIDITY);
 
 	for (short i = 0; i < timeout/5; i++) {
 		delay(5);
-		if (digitalRead(_dataPin) == LOW) {
+		if (digitalRead(dataPin) == LOW) {
 			break;
 		}
 		else if (i == timeout)
-			_lastError = ERROR_TIMEOUT;
+			lastError = ERROR_TIMEOUT;
 			return NAN; //error
 	}
 
@@ -204,21 +178,18 @@ float SHT1xController::readHumidity() {
 	val |= shiftIn(true);
 
 	unsigned char checksum = shiftIn(false); //sends the sensor into idle mode and retrieves checksum
-	unsigned char crc = calcCRC(READ_HUMIDITY, reverseOrder(_statusRegister & 0xF));
+	unsigned char crc = calcCRC(READ_HUMIDITY, reverseOrder(statusRegister & 0xF));
 	crc = calcCRC((val >> 8 & 0xF), crc);
 	crc = calcCRC((val & 0xF), crc);
 	
 	if (crc != reverseOrder(checksum)) {
-		_lastError = ERROR_CRC_MISMATCH; //error
+		lastError = ERROR_CRC_MISMATCH; //error
 		return NAN;
 	}
 #else
 	val |= shiftIn(false); //sends the sensor into idle mode
 #endif
-
-
-#ifndef SHT1X_SIMPLE
-	if (_statusRegister & RESOLUTION) { //8bit measure
+	if (statusRegister & RESOLUTION) { //8bit measure
 
 		// Apply linear conversion to raw value
 		return C1 + (C2h + C3h * val) * val;
@@ -227,12 +198,6 @@ float SHT1xController::readHumidity() {
 		// Apply linear conversion to raw value
 		return C1 + (C2 + C3 * val) * val;
 	}
-#else//12bit
-	
-	// Apply linear conversion to raw value
-	return C1 + (C2 + C3 * val) * val;
-#endif
-
 }
 
 float SHT1xController::readHumidity(float tempC){
@@ -243,17 +208,14 @@ float SHT1xController::readHumidity(float tempC){
 	const float C3 = -2.8000E-6;	// for 12 Bit
 	const float T1 = 0.01;			// for 8/12 Bit
 	const float T2 = 0.00008;		// for 12 Bit 
-
-#ifndef SHT1X_SIMPLE
+	
 	const float C2h = 0.6480;		// for 8 Bit
 	const float C3h = -7.2000E-4;	// for 8 Bit
 	const float T2h = 0.00128;		// for 8 Bit
-#endif
-
+	
 	float humidity = readHumidity();
 
-#ifndef SHT1X_SIMPLE
-	if (_statusRegister & RESOLUTION) { //8bit measure
+	if (statusRegister & RESOLUTION) { //8bit measure
 
 		int val = (-C2h + sqrt(C2h*C2h - 4*C3h*(C1 - humidity))) / (2*C3h);
 		// Correct humidity value for current temperature
@@ -267,15 +229,6 @@ float SHT1xController::readHumidity(float tempC){
 		// Correct humidity value for current temperature
 		return (tempC - 25.0) * (T1 + T2 * val) + humidity;
 	}
-
-#else //12bit
-
-	// Apply linear conversion to raw value
-	int val = (-C2 + sqrt(C2*C2 - 4*C3*(C1 - humidity))) / (2*C3);
-	
-	// Correct humidity value for current temperature
-	return (tempC - 25.0) * (T1 + T2 * val) + humidity;
-#endif
 }
 
 float SHT1xController::readDewpoint() {
@@ -315,13 +268,13 @@ void SHT1xController::reset(void) {
 }
 
 SHT1xController::SHT_RETURN_TYPE SHT1xController::getLastError(){
-	return _lastError;
+	return lastError;
 }
 
 #ifndef SHT1X_NO_SAFEGUARD
 unsigned long SHT1xController::timeUntilUnblock(){
-	unsigned long a = 0.1*(millis() - _timeStamp);
-	unsigned long b = TIMESPAN(_lastCmd);
+	unsigned long a = 0.1*(millis() - timeStamp);
+	unsigned long b = TIMESPAN(lastCmd);
 
 	return a > b ? 0 : 10*(b - a);
 }
@@ -329,36 +282,36 @@ unsigned long SHT1xController::timeUntilUnblock(){
 
 #ifndef SHT1X_SIMPLE
 SHT1xController::SHT_RETURN_TYPE SHT1xController::writeStatusRegister(unsigned char new_register) {
-	_lastError = sendCommand(WRITE_STATUS_REGISTER);
+	lastError = sendCommand(WRITE_STATUS_REGISTER);
 
-	if (_lastError == RETURN_SUCCESS) {
-		return shiftOut(_statusRegister = new_register & 0x7); //masks writable bits
+	if (lastError == RETURN_SUCCESS) {
+		return shiftOut(statusRegister = new_register & 0x7); //masks writable bits
 	}
 
-	return _lastError;
+	return lastError;
 }
 
 unsigned char SHT1xController::readStatusRegister() {
-	_lastError = sendCommand(READ_STATUS_REGISTER);
+	lastError = sendCommand(READ_STATUS_REGISTER);
 
 #ifndef SHT1X_NO_CRC_CHECK
-		if (_lastError == RETURN_SUCCESS) {
-			_statusRegister = shiftIn(true); //statusregister is only 8 bits long, so after this transmission we should recieve the checksum
+		if (lastError == RETURN_SUCCESS) {
+			statusRegister = shiftIn(true); //statusregister is only 8 bits long, so after this transmission we should recieve the checksum
 			unsigned char checksum = shiftIn(false); //sends the sensor into idle mode and retrieves checksum
-			unsigned char crc = calcCRC(READ_STATUS_REGISTER, reverseOrder(_statusRegister & 0xF));
-			crc = calcCRC(_statusRegister, crc);
+			unsigned char crc = calcCRC(READ_STATUS_REGISTER, reverseOrder(statusRegister & 0xF));
+			crc = calcCRC(statusRegister, crc);
 			
 			if (crc != reverseOrder(checksum)) {
-				_lastError = ERROR_CRC_MISMATCH; //error
+				lastError = ERROR_CRC_MISMATCH; //error
 			}		
 		}
 #else
-		if (_lastError == RETURN_SUCCESS) {
-			_statusRegister = shiftIn(false); //sends the sensor into idle mode
+		if (lastError == RETURN_SUCCESS) {
+			statusRegister = shiftIn(false); //sends the sensor into idle mode
 		}
 #endif
 
-	return _statusRegister;
+	return statusRegister;
 }
 #endif
 
@@ -366,103 +319,95 @@ SHT1xController::SHT_RETURN_TYPE SHT1xController::sendCommand(SHT_COMMAND_TYPE c
 
 #ifndef SHT1X_NO_SAFEGUARD 
 	if (!timeUntilUnblock()){ //can't be working for more than 10% of the time
-		return _lastError = ERROR_OVERLOAD;
+		return lastError = ERROR_OVERLOAD;
 	}
-	_timeStamp = millis();
-	_lastCmd = command;
+	timeStamp = millis();
+	lastCmd = command;
 #endif
 
 	//begin transmission
-	digitalWriteS(_dataPin, HIGH); //prevents possible low pulse
-	pinMode(_dataPin, OUTPUT);
+	digitalWriteS(dataPin, HIGH); //prevents possible low pulse
+	pinMode(dataPin, OUTPUT);
 	
-	digitalWriteL(_clockPin, HIGH); //sends TRANSMISSION START sequence
-	digitalWriteS(_dataPin, LOW);
+	digitalWriteL(clockPin, HIGH); //sends TRANSMISSION START sequence
+	digitalWriteS(dataPin, LOW);
 	
-	digitalWriteL(_clockPin, LOW);
-	digitalWriteS(_clockPin, HIGH);
+	digitalWriteL(clockPin, LOW);
+	digitalWriteS(clockPin, HIGH);
 
-	digitalWriteS(_dataPin, HIGH);
-	digitalWriteL(_clockPin, LOW);
+	digitalWriteS(dataPin, HIGH);
+	digitalWriteL(clockPin, LOW);
 
 	if(shiftOut(command) == RETURN_SUCCESS){ //sends command to sensor
 
 		if (command == SOFT_RESET) { //soft reset requested, status register is set to default (0)
-			#ifndef SHT1X_SIMPLE
-				_statusRegister = 0; //resets status register
-			#endif
-
+			statusRegister = 0; //resets status register
+			
 			#ifdef SHT1X_NO_SAFEGUARD //without safeguard active, we need to protect the sensor with a delay
 				delay(13); //sensor cannot recieve commands at least 11ms
 			#endif
 		}
 	}
-	return _lastError;
+	return lastError;
 }
 
 SHT1xController::SHT_RETURN_TYPE SHT1xController::shiftOut(unsigned char data) {
 	
-	pinMode(_dataPin, OUTPUT);
-	digitalWrite(_dataPin, LOW);
+	pinMode(dataPin, OUTPUT);
+	digitalWrite(dataPin, LOW);
 
 	for (unsigned char i = 0; i < 8; i++ )
 	{
-		digitalWriteS(_clockPin, HIGH);
-		digitalWrite(_dataPin, data << i & 0x80); //Shifts the data by one bit at a time (MSB)
-		digitalWriteS(_clockPin, LOW);
+		digitalWriteS(clockPin, HIGH);
+		digitalWrite(dataPin, data << i & 0x80); //Shifts the data by one bit at a time (MSB)
+		digitalWriteS(clockPin, LOW);
 	}
 
-	pinMode(_dataPin, INPUT); //sensor pushes line to LOW for ACK
-
-#ifndef SHT1X_NO_PULLUP
-	digitalWrite(_dataPin, SHT1X_PULLUP_STATE); //restore internall pullup
-#endif
+	pinMode(dataPin, INPUT); //sensor pushes line to LOW for ACK
+	digitalWrite(dataPin, SHT1X_PULLUP_STATE); //restore internal pullup
+	digitalWriteL(clockPin, HIGH);
 	
-	digitalWriteL(_clockPin, HIGH);
-	
-	if(digitalRead(_dataPin) != LOW){ //failure to acknowledge
-		return _lastError = ERROR_NO_ACK;
+	if(digitalRead(dataPin) != LOW){ //failure to acknowledge
+		return lastError = ERROR_NO_ACK;
 	}
 
-	digitalWriteS(_clockPin, LOW);
-	return _lastError = RETURN_SUCCESS;
+	digitalWriteS(clockPin, LOW);
+	return lastError = RETURN_SUCCESS;
 }
 
 unsigned char SHT1xController::shiftIn(bool sendAck) {
 
 	unsigned char val = 0;
-	pinMode(_dataPin, INPUT);
+	pinMode(dataPin, INPUT);
 
 	for (unsigned char i = 0; i < 8; i++ )
 	{
-		digitalWriteS(_clockPin, HIGH);
-		digitalWriteS(_clockPin, LOW);
-		val = val << 1 | digitalRead(_dataPin); //Shifts bits and adds in the recieved one
+		digitalWriteS(clockPin, HIGH);
+		digitalWriteS(clockPin, LOW);
+		val = val << 1 | digitalRead(dataPin); //Shifts bits and adds in the recieved one
 	}
 
-	pinMode(_dataPin, OUTPUT);
+	pinMode(dataPin, OUTPUT);
 	
-	digitalWriteS(_dataPin, !sendAck); //ACK is given by lowering the data line before sending a high pulse on clock line
-	digitalWriteL(_clockPin, HIGH);
-	digitalWriteS(_clockPin, LOW);
+	digitalWriteS(dataPin, !sendAck); //ACK is given by lowering the data line before sending a high pulse on clock line
+	digitalWriteL(clockPin, HIGH);
+	digitalWriteS(clockPin, LOW);
 
-	pinMode(_dataPin, INPUT);
+	pinMode(dataPin, INPUT);
+	digitalWrite(dataPin, SHT1X_PULLUP_STATE); //restore internall pullup
 
-#ifndef SHT1X_NO_PULLUP
-		digitalWrite(_dataPin, SHT1X_PULLUP_STATE); //restore internall pullup
-#endif
 	
 	return val;
 }
 
 void SHT1xController::resetConnection() {
 
-	digitalWriteS(_dataPin, HIGH);
-	pinMode(_dataPin, OUTPUT);
+	digitalWriteS(dataPin, HIGH);
+	pinMode(dataPin, OUTPUT);
 
 	for (unsigned char i = 0; i < 9; i++) {
-		digitalWriteL(_clockPin, HIGH);
-		digitalWriteL(_clockPin, LOW);
+		digitalWriteL(clockPin, HIGH);
+		digitalWriteL(clockPin, LOW);
 	}
 }
 
@@ -471,7 +416,7 @@ void SHT1xController::resetConnection() {
 
 unsigned char SHT1xController::calcCRC(unsigned char data, unsigned char crc) {
 	
-#ifdef SHT1X_BITWISE_CRC
+#ifdef SHT1X_USE_BITWISE_CRC
 		const unsigned char poly = 0x31;   //P(x)=x^8+x^5+x^4+1 = |0001|0011|0001   ~ for CRC-8 checksum
 
 		crc ^= data; //Checks which bits differ from the recieved/transmitted data
@@ -504,9 +449,7 @@ unsigned char SHT1xController::calcCRC(unsigned char data, unsigned char crc) {
 		 209, 70, 119, 36, 21, 59, 10, 89, 104, 255, 206, 157, 172};
 
 		return CRC_Table[crc ^ data];
-
 #endif
-
 }
 
 unsigned char SHT1xController::reverseOrder(unsigned char data) {
@@ -522,5 +465,4 @@ unsigned char SHT1xController::reverseOrder(unsigned char data) {
 
 	return r << s;
 }
-
 #endif
