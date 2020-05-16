@@ -1,5 +1,5 @@
 /*
-* SHT1x Expanded Library by jnfaria
+* SHT1x Expanded Library by jncfa
 *  Based in the library created by Sparkfun.
 *
 * Based on previous work by:
